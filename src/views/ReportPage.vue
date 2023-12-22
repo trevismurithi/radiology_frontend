@@ -5,15 +5,71 @@ import List from "@editorjs/list";
 import Snackbar from "@/components/SnackbarComponent.vue";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useChecker } from "@/composables/utils";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import {useAppStore} from '@/store/app'
 export default {
   components: { Snackbar },
   data: () => ({
+    store: useAppStore(),
+    user: {},
     url: "https://raccoon.dicom.org.tw:443/dicom-web/studies",
     loading: false,
     response: {
       isShow: false,
       color: "",
       text: "",
+    },
+    editorBlocks: {
+      blocks: [
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'Name:      Number:',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'Age:      Gender:    Referring Doctor:',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'MODALITY+STUDY',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'CLINICAL HISTORY',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'COMPARISSON',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'FINDINGS',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'CONCLUSION',
+                            }
+                        },
+                        {
+                            type: 'paragraph',
+                            data: {
+                                text: 'RADIOLOGIST+DATE+CONTACT',
+                            }
+                        }
+                    ]
     },
     fullNames: "",
     number: "",
@@ -23,8 +79,24 @@ export default {
     radiologist: "",
     record: {},
     editor: null,
+    headerImage: 'link',
+    footerImage: 'link'
   }),
   mounted() {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const uid = user.uid;
+        // get current user
+        this.getCurrentUser(uid);
+      } else {
+        // User is signed out
+        // ...
+        console.log("auth.currentUser: N/A");
+      }
+    });
     console.log("this.$firestore: ", this.$firestore);
     if (this.$route.query) {
       console.log("this.$route.query: ", window.location.search);
@@ -46,18 +118,36 @@ export default {
       },
     });
     console.log(this.editor);
-    this.loading = true;
     setTimeout(() => {
-      this.readDocument()
+      this.readDocument();
       this.loading = false;
     }, 10000);
   },
   methods: {
+    async getCurrentUser(uid) {
+      this.loading = true;
+      const docRef = doc(this.$firestore, "users", uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        this.user = {...docSnap.data(), uid: docSnap.id};
+        console.log("Current User data:", this.user);
+        this.store.setUser(this.user);
+        if(this.user.header) {
+          this.headerImage = this.user.header
+        }
+        if(this.user.footer) {
+          this.footerImage = this.user.footer
+        }
+      } else {
+        // docSnap.data() will be undefined in this case
+        console.log("No such document!");
+      }
+    },
     renderEditor(data) {
       this.editor.render(data);
     },
     async readData(url) {
-      this.loading = true;
       try {
         const res = await fetch(url, {
           method: "GET",
@@ -75,7 +165,6 @@ export default {
         this.response.text = "record not found";
         this.response.color = "bg-red";
       }
-      this.loading = false;
     },
     checkForNameIn(data) {
       return useChecker(data);
@@ -89,29 +178,38 @@ export default {
     },
     async readDocument() {
       this.loading = true;
-      const docRef = doc(this.$firestore, "records", this.$route.query.StudyInstanceUID);
+      const docRef = doc(
+        this.$firestore,
+        "records",
+        this.$route.query.StudyInstanceUID
+      );
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
         console.log("Document data:", docSnap.data());
-        this.renderEditor(docSnap.data());
+        this.renderEditor(docSnap.data().data);
+        this.referring = docSnap.data().user.name
       } else {
         // docSnap.data() will be undefined in this case
         console.log("No such document!");
+        this.editorBlocks.blocks[0].data.text = `Name: ${this.fullNames}  Number: ${this.number}`
+        this.editorBlocks.blocks[1].data.text = `Age: 34   Gender: Male  Referring Doctor: ${this.user.name}`
+        this.renderEditor(this.editorBlocks)
       }
     },
     async addRecord() {
       this.loading = true;
       const db = this.$firestore;
       const studyID = this.$route.query.StudyInstanceUID;
+      const user = this.user;
       this.editor
         .save()
-        .then(async function (outputData) {
+        .then(async (outputData) =>{
           try {
-            const docRef = await setDoc(
-              doc(db, "records", studyID),
-              outputData
-            );
+            const docRef = await setDoc(doc(db, "records", studyID), {
+              data: outputData,
+              user
+            });
             console.log("Document written with ID: ", docRef);
             this.loading = false;
           } catch (e) {
@@ -129,7 +227,7 @@ export default {
 </script>
 <template>
   <v-row no-gutters>
-    <v-col class="pa-2">
+    <v-col md="12" xl="8" class="pa-2 mx-auto">
       <div>
         <v-row no-gutters justify="end">
           <v-btn
@@ -142,6 +240,7 @@ export default {
             Save
           </v-btn>
           <v-btn
+            v-if="false"
             class="my-3 text-capitalize"
             elevation="0"
             variant="flat"
@@ -155,8 +254,8 @@ export default {
           <div class="d-flex">
             <div class="__cell_full__ text-center">
               <v-img
-                src="https://png.pngtree.com/thumb_back/fh260/background/20210828/pngtree-rectangle-diagonal-cut-white-lines-yellow-background-image_765017.jpg"
-                lazy-src="https://png.pngtree.com/thumb_back/fh260/background/20210828/pngtree-rectangle-diagonal-cut-white-lines-yellow-background-image_765017.jpg"
+              :src="headerImage"
+                :lazy-src="headerImage"
                 width="100%"
                 height="100"
                 cover=""
@@ -167,46 +266,13 @@ export default {
           <div class="d-flex">
             <div class="__cell_full__ text-center">
               <v-img
-                src="https://png.pngtree.com/thumb_back/fh260/background/20210828/pngtree-rectangle-diagonal-cut-white-lines-yellow-background-image_765017.jpg"
-                lazy-src="https://png.pngtree.com/thumb_back/fh260/background/20210828/pngtree-rectangle-diagonal-cut-white-lines-yellow-background-image_765017.jpg"
+                :src="footerImage"
+                :lazy-src="footerImage"
                 width="100%"
                 height="100"
                 cover=""
               />
             </div>
-          </div>
-        </div>
-      </div>
-    </v-col>
-    <v-col class="px-2 pt-5">
-      <div>
-        <div class="d-flex">
-          <div class="__cell_full__ text-center">
-            HEADER
-          </div>
-        </div>
-        <div class="d-flex">
-          <div class="__cell__50">
-            Name: {{ fullNames }}
-          </div>
-          <div class="__cell__50">
-            Number: {{ number }}
-          </div>
-        </div>
-        <div class="d-flex">
-          <div class="__cell__">
-            AGE: {{ age }}
-          </div>
-          <div class="__cell__">
-            GENDER {{ gender }}
-          </div>
-          <div class="__cell__">
-            REFERRING DOCTOR: {{ referring }}
-          </div>
-        </div>        
-        <div class="d-flex">
-          <div class="__cell_full__ text-center">
-            FOOTER
           </div>
         </div>
       </div>

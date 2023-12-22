@@ -108,8 +108,12 @@ onAuthStateChanged(auth, (user) => {
       }
       const url = "http://localhost:8080/bluelight/html/start.html" + path;
       navigator.clipboard.writeText(url);
+      this.response.isShow = true
+      this.response.color = 'bg-grey'
+      this.response.text = 'copied'
     },
     openNewPath(i, value) {
+      console.log('index: ', i)
       if (i === 1) {
         const path = "?StudyInstanceUID=" + value;
         window.open(
@@ -186,7 +190,6 @@ onAuthStateChanged(auth, (user) => {
 <template>
   <v-row no-gutters>
     <v-col cols="12">
-      {{ store }}
       <v-row v-if="false" no-gutters class="my-2" justify="end">
         <div class="d-flex">
           <div style="width:200px">
@@ -316,7 +319,7 @@ onAuthStateChanged(auth, (user) => {
                         :key="index"
                         @click="
                           openNewPath(
-                            i + 1,
+                            index + 1,
                             checkForNameIn(data['0020000D']),
                           )
                         "
