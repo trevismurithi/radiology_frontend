@@ -188,7 +188,7 @@ onAuthStateChanged(auth, (user) => {
 };
 </script>
 <template>
-  <v-row no-gutters>
+  <v-row no-gutters class="bg-grey-lighten-4">
     <v-col cols="12">
       <v-row v-if="false" no-gutters class="my-2" justify="end">
         <div class="d-flex">

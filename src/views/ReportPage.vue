@@ -226,8 +226,8 @@ export default {
 };
 </script>
 <template>
-  <v-row no-gutters>
-    <v-col md="12" xl="8" class="pa-2 mx-auto">
+  <v-row no-gutters class="bg-grey-lighten-4">
+    <v-col md="10" xl="8" class="pa-2 mx-auto bg-white">
       <div>
         <v-row no-gutters justify="end">
           <v-btn
