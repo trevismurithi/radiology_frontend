@@ -35,6 +35,7 @@ onAuthStateChanged(auth, (user) => {
     registerPlugins(app)
 
     app.use(db)
+    app.provide('message', 'testing this text')
     app.mount('#app')
   });
 

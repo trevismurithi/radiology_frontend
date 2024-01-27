@@ -23,7 +23,6 @@ const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
 console.log('app firebase: ', app)
 const db = getFirestore(app);
-export {}
 export default {
   install: (app) => {
     app.config.globalProperties.$firestore = db

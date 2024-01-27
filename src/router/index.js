@@ -6,21 +6,32 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layouts/default/DefaultLayout.vue'),
-    beforeEnter: () => {
+    beforeEnter: (to) => {
       const auth = getAuth();
       if(auth.currentUser && auth.currentUser.email) {
+        if(to.path === '/') {
+          return '/home'
+        }
         return true
       }
       return '/auth/login'
     },
     children: [
       {
-        path: '',
+        path: '/home',
         name: 'Home',
         // route level code-splitting
         // this generates a separate chunk (Home-[hash].js) for this route
         // which is lazy-loaded when the route is visited.
         component: () => import('@/views/HomePage.vue'),
+      },
+      {
+        path: '/reports',
+        name: 'ReportList',
+        // route level code-splitting
+        // this generates a separate chunk (Home-[hash].js) for this route
+        // which is lazy-loaded when the route is visited.
+        component: () => import('@/views/ReportsPage.vue'),
       },
       {
         path: '/report',
@@ -31,12 +42,28 @@ const routes = [
         component: () => import('@/views/ReportPage.vue'),
       },
       {
+        path: '/archives',
+        name: 'Archives',
+        // route level code-splitting
+        // this generates a separate chunk (Home-[hash].js) for this route
+        // which is lazy-loaded when the route is visited.
+        component: () => import('@/views/ArchivesPage.vue'),
+      },
+      {
         path: '/profile',
         name: 'Profile',
         // route level code-splitting
         // this generates a separate chunk (Home-[hash].js) for this route
         // which is lazy-loaded when the route is visited.
         component: () => import('@/views/ProfilePage.vue'),
+      },
+      {
+        path: '/dicomweb',
+        name: 'Dicom',
+        // route level code-splitting
+        // this generates a separate chunk (Home-[hash].js) for this route
+        // which is lazy-loaded when the route is visited.
+        component: () => import('@/views/DicomPage.vue'),
       },
     ],
   },

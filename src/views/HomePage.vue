@@ -1,25 +1,28 @@
 <script>
-import { orderByField } from '@/composables/search'
+import { orderByField } from "@/composables/search";
 import { useChecker } from "@/composables/utils";
-import Snackbar from '@/components/SnackbarComponent.vue'
+import Snackbar from "@/components/SnackbarComponent.vue";
 import { doc, getDoc } from "firebase/firestore";
-import { getAuth, onAuthStateChanged  } from "firebase/auth";
-import {useAppStore} from '@/store/app'
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useAppStore } from "@/store/app";
 export default {
-  components: {Snackbar},
+  components: { Snackbar },
   data() {
     return {
+      seriesDialog: false,
       store: useAppStore(),
+      seriesList: [],
       user: {},
       reverse: false,
-      orderSelected: '',
+      orderSelected: "",
       response: {
         isShow: false,
         color: "",
         text: "",
       },
       loading: false,
-      url: "https://raccoon.dicom.org.tw:443/dicom-web/studies",
+      url: "http://127.0.0.1:4200/dicom-web/studies",
+      series: "http://127.0.0.1:4200/dicom-web/studies/",
       page: 1,
       headers: [
         {
@@ -38,10 +41,6 @@ export default {
       ],
       actions: [
         {
-          title: "Open Study",
-        },
-        {
-          path: "http://localhost:8080/search/html/report.html",
           title: "Open Report",
         },
       ],
@@ -65,19 +64,19 @@ export default {
   async mounted() {
     // read user
     const auth = getAuth();
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    // User is signed in, see docs for a list of available properties
-    // https://firebase.google.com/docs/reference/js/auth.user
-    const uid = user.uid;
-    // get current user
-    this.getCurrentUser(uid)
-  } else {
-    // User is signed out
-    // ...
-    console.log('auth.currentUser: N/A')
-  }
-});
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/auth.user
+        const uid = user.uid;
+        // get current user
+        this.getCurrentUser(uid);
+      } else {
+        // User is signed out
+        // ...
+        console.log("auth.currentUser: N/A");
+      }
+    });
     await this.readData(this.url);
   },
   methods: {
@@ -88,16 +87,16 @@ onAuthStateChanged(auth, (user) => {
 
       if (docSnap.exists()) {
         console.log("Current User data:", docSnap.data());
-        this.user = docSnap.data()
-        this.store.setUser(this.user)
+        this.user = docSnap.data();
+        this.store.setUser(this.user);
       } else {
         // docSnap.data() will be undefined in this case
         console.log("No such document!");
       }
     },
-    orderData(key){
-      this.orderSelected = key
-      orderByField(key, this.dataList, this.reverse)
+    orderData(key) {
+      this.orderSelected = key;
+      orderByField(key, this.dataList, this.reverse);
     },
     copyText(i, value) {
       let path = "";
@@ -108,23 +107,13 @@ onAuthStateChanged(auth, (user) => {
       }
       const url = "http://localhost:8080/bluelight/html/start.html" + path;
       navigator.clipboard.writeText(url);
-      this.response.isShow = true
-      this.response.color = 'bg-grey'
-      this.response.text = 'copied'
+      this.response.isShow = true;
+      this.response.color = "bg-grey";
+      this.response.text = "copied";
     },
-    openNewPath(i, value) {
-      console.log('index: ', i)
-      if (i === 1) {
-        const path = "?StudyInstanceUID=" + value;
-        window.open(
-          "http://localhost:8080/bluelight/html/start.html" + path,
-          "_blank"
-        );
-      } else {
-        const path =
-          "?StudyInstanceUID=" + value ;
-          this.$router.push("/report" + path)
-      }
+    openNewPath(value) {
+      const path = "?StudyInstanceUID=" + value;
+      this.$router.push("/report" + path);
     },
     checkForNameIn(data) {
       return useChecker(data);
@@ -158,24 +147,24 @@ onAuthStateChanged(auth, (user) => {
       await this.readData(this.url + query);
     },
     async readData(url = this.url) {
-      this.loading = true
-      try{
+      this.loading = true;
+      try {
         const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
-      const data = await res.json();
-      this.dataList = data;
-      }catch(e) {
-        console.log('errorReadData: ', e)
-        this.response.isShow = true
-        this.response.text = 'record not found'
-        this.response.color = 'bg-red'
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        });
+        const data = await res.json();
+        this.dataList = data;
+      } catch (e) {
+        console.log("errorReadData: ", e);
+        this.response.isShow = true;
+        this.response.text = "record not found";
+        this.response.color = "bg-red";
       }
-      this.loading = false
+      this.loading = false;
     },
     updateSnackBar(e) {
       this.response = {
@@ -183,6 +172,22 @@ onAuthStateChanged(auth, (user) => {
         color: "",
         text: "",
       };
+    },
+    async fetchSeries(studyID) {
+      try {
+        const res = await fetch(this.series + studyID + "/series", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        });
+        this.seriesList = await res.json();
+        this.seriesDialog = true;
+        console.log("fetchingSeries: ", this.seriesList);
+      } catch (e) {
+        //
+      }
     },
   },
 };
@@ -192,25 +197,25 @@ onAuthStateChanged(auth, (user) => {
     <v-col cols="12">
       <v-row v-if="false" no-gutters class="my-2" justify="end">
         <div class="d-flex">
-          <div style="width:200px">
+          <div style="width: 200px">
             <v-text-field
-                  v-model="StudyDateFrom"
-                  type="date"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="From Date"
-                />
+              v-model="StudyDateFrom"
+              type="date"
+              density="compact"
+              hide-details
+              variant="plain"
+              label="From Date"
+            />
           </div>
-          <div class="ml-5" style="width:200px">
+          <div class="ml-5" style="width: 200px">
             <v-text-field
-                  v-model="StudyDateTo"
-                  type="date"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="To Date"
-                />
+              v-model="StudyDateTo"
+              type="date"
+              density="compact"
+              hide-details
+              variant="plain"
+              label="To Date"
+            />
           </div>
         </div>
       </v-row>
@@ -218,39 +223,52 @@ onAuthStateChanged(auth, (user) => {
         <template #default>
           <thead>
             <tr>
-                <th class="text-left">
-                  Patient ID
-                  <v-icon :color="orderSelected==='00100020'?'primary':'black'" @click="orderData('00100020', reverse =!reverse)">
-                    mdi-arrow-up-down-bold
-                  </v-icon>
-                </th>
+              <th class="text-left">
+                Patient ID
+                <v-icon
+                  :color="orderSelected === '00100020' ? 'primary' : 'black'"
+                  @click="orderData('00100020', (reverse = !reverse))"
+                >
+                  mdi-arrow-up-down-bold
+                </v-icon>
+              </th>
               <th class="text-left">
                 Patient Name
-                <v-icon :color="orderSelected==='00100010'?'primary':'black'" @click="orderData('00100010', reverse =!reverse)">
-                    mdi-arrow-up-down-bold
-                  </v-icon>
+                <v-icon
+                  :color="orderSelected === '00100010' ? 'primary' : 'black'"
+                  @click="orderData('00100010', (reverse = !reverse))"
+                >
+                  mdi-arrow-up-down-bold
+                </v-icon>
               </th>
               <th class="text-left">
                 Study Date
-                <v-icon :color="orderSelected==='00080020'?'primary':'black'" @click="orderData('00080020', reverse =!reverse)">
-                    mdi-arrow-up-down-bold
-                  </v-icon>
+                <v-icon
+                  :color="orderSelected === '00080020' ? 'primary' : 'black'"
+                  @click="orderData('00080020', (reverse = !reverse))"
+                >
+                  mdi-arrow-up-down-bold
+                </v-icon>
               </th>
               <th class="text-left">
                 Identifier
-                <v-icon :color="orderSelected==='00080050'?'primary':'black'" @click="orderData('00080050', reverse =!reverse)">
-                    mdi-arrow-up-down-bold
-                  </v-icon>
+                <v-icon
+                  :color="orderSelected === '00080050' ? 'primary' : 'black'"
+                  @click="orderData('00080050', (reverse = !reverse))"
+                >
+                  mdi-arrow-up-down-bold
+                </v-icon>
               </th>
               <th class="text-left">
                 Modality
-                <v-icon :color="orderSelected==='00080061'?'primary':'black'" @click="orderData('00080061', reverse =!reverse)">
-                    mdi-arrow-up-down-bold
-                  </v-icon>
+                <v-icon
+                  :color="orderSelected === '00080061' ? 'primary' : 'black'"
+                  @click="orderData('00080061', (reverse = !reverse))"
+                >
+                  mdi-arrow-up-down-bold
+                </v-icon>
               </th>
-              <th>
-                Actions
-              </th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -273,9 +291,7 @@ onAuthStateChanged(auth, (user) => {
                   label="search name"
                 />
               </td>
-              <td>
-                N/A
-              </td>
+              <td>N/A</td>
               <td>
                 <v-text-field
                   v-model="identifier"
@@ -296,7 +312,8 @@ onAuthStateChanged(auth, (user) => {
               </td>
               <td>
                 <v-btn
-                  color="primary"
+                  color="blue-darken-2"
+                  variant="flat"
                   class="text-capitalize"
                   @click="filterData"
                   >search</v-btn
@@ -310,17 +327,21 @@ onAuthStateChanged(auth, (user) => {
               <td>{{ checkForNameIn(data["00080050"]) }}</td>
               <td>{{ checkForNameIn(data["00080061"]) }}</td>
               <td>
-                <v-btn color="primary" class="text-capitalize">
+                <v-btn color="primary" variant="plain" class="text-capitalize">
                   More
                   <v-menu activator="parent">
                     <v-list>
+                      <v-list-item
+                        @click="fetchSeries(checkForNameIn(data['0020000D']))"
+                      >
+                        <v-list-item-title> View </v-list-item-title>
+                      </v-list-item>
                       <v-list-item
                         v-for="(item, index) in actions"
                         :key="index"
                         @click="
                           openNewPath(
-                            index + 1,
-                            checkForNameIn(data['0020000D']),
+                            checkForNameIn(data['0020000D'])
                           )
                         "
                       >
@@ -341,7 +362,7 @@ onAuthStateChanged(auth, (user) => {
           </tbody>
         </template>
       </v-table>
-      <v-pagination v-model="page" :length="6" />
+      <!-- <v-pagination v-model="page" :length="6" /> -->
     </v-col>
     <Snackbar
       :snackbar="response.isShow"
@@ -350,7 +371,56 @@ onAuthStateChanged(auth, (user) => {
       @update-bool="updateSnackBar"
     />
     <v-dialog v-model="loading">
-      <v-progress-circular indeterminate :size="66" :width="10" class="mx-auto"></v-progress-circular>
+      <v-progress-circular
+        indeterminate
+        :size="66"
+        :width="10"
+        class="mx-auto"
+      ></v-progress-circular>
+    </v-dialog>
+    <v-dialog v-model="seriesDialog" width="80%" persistent>
+      <v-card class="pa-4">
+        <v-row no-gutters justify="end">
+          <v-icon @click="seriesDialog = false"> mdi-close </v-icon>
+        </v-row>
+        <v-table>
+          <template #default>
+            <thead>
+              <tr>
+                <th class="left">Patient ID</th>
+                <th class="left">Patient Name</th>
+                <th class="left">Study Date</th>
+                <th class="left">Identifier</th>
+                <th class="left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(data, i) in seriesList" :key="i">
+                <td>{{ checkForNameIn(data["00100020"]) }}</td>
+                <td>{{ checkForNameIn(data["00100010"]) }}</td>
+                <td>{{ checkForNameIn(data["00080020"]) }}</td>
+                <td>{{ checkForNameIn(data["00080050"]) }}</td>
+                <td>
+                  <v-btn
+                    variant="flat"
+                    class="text-capitalize text-blue"
+                    append-icon="mdi-arrow-right"
+                    @click="
+                      $router.push(
+                        `/dicomweb?studyUID=${checkForNameIn(
+                          data['0020000D']
+                        )}&seriesUID=${checkForNameIn(data['0020000E'])}`
+                      )
+                    "
+                  >
+                    open
+                  </v-btn>
+                </td>
+              </tr>
+            </tbody>
+          </template>
+        </v-table>
+      </v-card>
     </v-dialog>
   </v-row>
 </template>

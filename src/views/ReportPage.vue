@@ -6,13 +6,15 @@ import Snackbar from "@/components/SnackbarComponent.vue";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useChecker } from "@/composables/utils";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import {useAppStore} from '@/store/app'
+import { useAppStore } from "@/store/app";
+import edjHTML from 'editorjs-html'
 export default {
   components: { Snackbar },
   data: () => ({
+    pdfLink: 'http://localhost:4000/bucket/pdf',
     store: useAppStore(),
     user: {},
-    url: "https://raccoon.dicom.org.tw:443/dicom-web/studies",
+    url: "http://127.0.0.1:4200/dicom-web/studies",
     loading: false,
     response: {
       isShow: false,
@@ -21,55 +23,55 @@ export default {
     },
     editorBlocks: {
       blocks: [
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'Name:      Number:',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'Age:      Gender:    Referring Doctor:',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'MODALITY+STUDY',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'CLINICAL HISTORY',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'COMPARISSON',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'FINDINGS',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'CONCLUSION',
-                            }
-                        },
-                        {
-                            type: 'paragraph',
-                            data: {
-                                text: 'RADIOLOGIST+DATE+CONTACT',
-                            }
-                        }
-                    ]
+        {
+          type: "paragraph",
+          data: {
+            text: "Name:      Number:",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "Age:      Gender:    Referring Doctor:",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "MODALITY+STUDY",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "CLINICAL HISTORY",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "COMPARISSON",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "FINDINGS",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "CONCLUSION",
+          },
+        },
+        {
+          type: "paragraph",
+          data: {
+            text: "RADIOLOGIST+DATE+CONTACT",
+          },
+        },
+      ],
     },
     fullNames: "",
     number: "",
@@ -79,8 +81,10 @@ export default {
     radiologist: "",
     record: {},
     editor: null,
-    headerImage: 'link',
-    footerImage: 'link'
+    headerImage: "link",
+    footerImage: "link",
+    isShowActions: false,
+    isEdit: false,
   }),
   mounted() {
     const auth = getAuth();
@@ -130,14 +134,14 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        this.user = {...docSnap.data(), uid: docSnap.id};
+        this.user = { ...docSnap.data(), uid: docSnap.id };
         console.log("Current User data:", this.user);
         this.store.setUser(this.user);
-        if(this.user.header) {
-          this.headerImage = this.user.header
+        if (this.user.header) {
+          this.headerImage = this.user.header;
         }
-        if(this.user.footer) {
-          this.footerImage = this.user.footer
+        if (this.user.footer) {
+          this.footerImage = this.user.footer;
         }
       } else {
         // docSnap.data() will be undefined in this case
@@ -145,7 +149,7 @@ export default {
       }
     },
     renderEditor(data) {
-      this.editor.render(data);
+      return this.editor.render(data);
     },
     async readData(url) {
       try {
@@ -188,27 +192,84 @@ export default {
       if (docSnap.exists()) {
         console.log("Document data:", docSnap.data());
         this.renderEditor(docSnap.data().data);
-        this.referring = docSnap.data().user.name
+        this.referring = docSnap.data().user.name;
+        if (this.$mainUser.uid === docSnap.data().user.uid){
+          this.isShowActions = true
+        }else {
+          this.isShowActions = false
+        }
       } else {
         // docSnap.data() will be undefined in this case
         console.log("No such document!");
-        this.editorBlocks.blocks[0].data.text = `Name: ${this.fullNames}  Number: ${this.number}`
-        this.editorBlocks.blocks[1].data.text = `Age: 34   Gender: Male  Referring Doctor: ${this.user.name}`
-        this.renderEditor(this.editorBlocks)
+        this.isShowActions = true
+        const template = await this.readTemplate()
+        this.renderEditor(template?template:{})
+        // .then(() => {
+        //   // save an empty array
+        //   this.addRecord(true)
+        // });
       }
     },
-    async addRecord() {
+    async readTemplate() {
+      const docRef = doc(
+        this.$firestore,
+        "templates",
+        this.user.uid
+      );
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        console.log("Document data:", docSnap.data());
+        return docSnap.data()
+      } else {
+        // docSnap.data() will be undefined in this case
+        console.log("No such Template!");
+        return null
+      }
+    },
+    async addRecord(pending = false) {
       this.loading = true;
       const db = this.$firestore;
       const studyID = this.$route.query.StudyInstanceUID;
       const user = this.user;
       this.editor
         .save()
-        .then(async (outputData) =>{
+        .then(async (outputData) => {
           try {
             const docRef = await setDoc(doc(db, "records", studyID), {
+              pending,
               data: outputData,
-              user
+              user,
+            });
+            if(pending) {
+              this.isEdit = true
+            }else {
+              this.isEdit = false
+            }
+            console.log("Document written with ID: ", docRef);
+            this.loading = false;
+          } catch (e) {
+            console.error("Error adding document: ", e);
+            this.loading = false;
+          }
+        })
+        .catch((error) => {
+          console.log("addRecordError: ", error);
+          this.loading = false;
+        });
+    },
+    async addArchive() {
+      this.loading = true;
+      const db = this.$firestore;
+      const studyID = this.$route.query.StudyInstanceUID;
+      const user = this.user;
+      this.editor
+        .save()
+        .then(async (outputData) => {
+          try {
+            const docRef = await setDoc(doc(db, "archives", studyID), {
+              data: outputData,
+              user,
             });
             console.log("Document written with ID: ", docRef);
             this.loading = false;
@@ -222,6 +283,40 @@ export default {
           this.loading = false;
         });
     },
+    async generateUrl () {
+      this.loading = true;
+      this.editor
+        .save()
+        .then(async (outputData) => {
+          try {
+            const edjsParser = edjHTML()
+            const study = edjsParser.parse(outputData)
+            const res = await fetch(this.pdfLink + '/' + this.$route.query.StudyInstanceUID, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                study
+              })
+            })
+            // const data = await res.text()
+            const json = await res.json()
+            // console.log('data: ', data)
+            console.log('json: ', json)
+            // console.log('url: ', html)
+            // window.open(this.pdfLink)
+            this.loading = false;
+          } catch (e) {
+            console.error("Error adding document: ", e);
+            this.loading = false;
+          }
+        })
+        .catch((error) => {
+          console.log("addRecordError: ", error);
+          this.loading = false;
+        });
+    }
   },
 };
 </script>
@@ -230,31 +325,33 @@ export default {
     <v-col md="10" xl="8" class="pa-2 mx-auto bg-white">
       <div>
         <v-row no-gutters justify="end">
-          <v-btn
-            class="my-3 mx-4 text-capitalize"
-            elevation="0"
-            variant="flat"
-            color="primary"
-            @click="addRecord"
-          >
-            Save
-          </v-btn>
-          <v-btn
-            v-if="false"
-            class="my-3 text-capitalize"
-            elevation="0"
-            variant="flat"
-            color="primary"
-            @click.prevent=""
-          >
-            Dispatch
-          </v-btn>
+          <v-menu v-if="isShowActions">
+            <template v-slot:activator="{ props }">
+              <v-btn class="my-3 text-capitalize" color="primary" variant="flat" v-bind="props">
+                Actions
+              </v-btn>
+            </template>
+            <v-list class="__cursor__">
+              <v-list-item v-if="!isEdit" @click="addRecord(true)">
+                <v-list-item-title>Edit Report</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="isEdit" @click="addRecord(false)">
+                <v-list-item-title>Save Report</v-list-item-title>
+              </v-list-item>
+              <v-list-item @click="generateUrl">
+                <v-list-item-title>Get PDF</v-list-item-title>
+              </v-list-item>
+              <v-list-item v-if="isEdit" @click="addArchive">
+                <v-list-item-title>Archive Report</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-row>
         <div>
           <div class="d-flex">
             <div class="__cell_full__ text-center">
               <v-img
-              :src="headerImage"
+                :src="headerImage"
                 :lazy-src="headerImage"
                 width="100%"
                 height="100"
@@ -294,6 +391,9 @@ export default {
   </v-row>
 </template>
 <style>
+.__cursor__{
+  cursor: pointer;
+}
 .__cell__50 {
   border: 1px solid rgb(0, 0, 0);
   margin: 0;

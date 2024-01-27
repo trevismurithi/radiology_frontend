@@ -1,25 +1,56 @@
 <script>
+import EditorJS from "@editorjs/editorjs";
+import Header from "@editorjs/header";
+import List from "@editorjs/list";
 import { useAppStore } from "@/store/app";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import Snackbar from '@/components/SnackbarComponent.vue'
+import Snackbar from "@/components/SnackbarComponent.vue";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useRequired } from "@/composables/rules";
 export default {
-  components: {Snackbar},
+  components: { Snackbar },
   data: () => ({
     store: useAppStore(),
+    required: useRequired(),
     user: {},
     response: {
-        isShow: false,
-        color: "",
-        text: "",
-      },
+      isShow: false,
+      color: "",
+      text: "",
+    },
+    editor: null,
+    editorBlocks: {
+      blocks: [
+        {
+          type: "paragraph",
+          data: {
+            text: "Create your template here...",
+          },
+        },
+      ],
+    },
     files: null,
     loading: false,
-    headerImage: 'link',
-    footerImage: 'link'
+    headerImage: "link",
+    footerImage: "link",
   }),
   async mounted() {
+    this.editor = new EditorJS({
+      /**
+       * Id of Element that should contain the Editor
+       */
+      holder: "editorjs",
+
+      /**
+       * Available Tools list.
+       * Pass Tool's class or Settings object for each Tool you want to use
+       */
+      tools: {
+        header: Header,
+        list: List,
+      },
+    });
     // read user
     const auth = getAuth();
     onAuthStateChanged(auth, async (user) => {
@@ -36,8 +67,15 @@ export default {
         console.log("auth.currentUser: N/A");
       }
     });
+    setTimeout(() => {
+      this.readDocument();
+      this.loading = false;
+    }, 10000);
   },
   methods: {
+    renderEditor(data) {
+      return this.editor.render(data);
+    },
     async getCurrentUser(uid) {
       this.loading = true;
       const docRef = doc(this.$firestore, "users", uid);
@@ -46,12 +84,12 @@ export default {
       if (docSnap.exists()) {
         console.log("Current User data:", docSnap.data());
         this.user = docSnap.data();
-        this.user = {...this.user, uid}
-        if(this.user.header) {
-          this.headerImage = this.user.header
+        this.user = { ...this.user, uid };
+        if (this.user.header) {
+          this.headerImage = this.user.header;
         }
-        if(this.user.footer) {
-          this.footerImage = this.user.footer
+        if (this.user.footer) {
+          this.footerImage = this.user.footer;
         }
         this.store.setUser(this.user);
       } else {
@@ -60,18 +98,23 @@ export default {
       }
     },
     async uploadHeaderFooter() {
-      this.loading = true
-      this.uploadFiles('header', true, 0)
-      this.uploadFiles('footer', false, 1)
+      const formState = await this.$refs.form.validate()
+      if (formState.valid) {
+        this.loading = true;
+        this.uploadFiles("header", true, 0);
+        this.uploadFiles("footer", false, 1);
+      }
     },
     async updateProfile(user) {
-        try {
-          const docRef = await setDoc(
-            doc(this.$firestore, "users", this.user.uid), user);
-          console.log("Document written with ID: ", docRef);
-        } catch (e) {
-          console.error("Error adding document: ", e);
-        }
+      try {
+        const docRef = await setDoc(
+          doc(this.$firestore, "users", this.user.uid),
+          user
+        );
+        console.log("Document written with ID: ", docRef);
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
     },
     uploadFiles(name, state, index) {
       const storage = getStorage();
@@ -83,18 +126,24 @@ export default {
         getDownloadURL(ref(storage, name))
           .then(async (url) => {
             console.log("Uploaded a blob or file!", url);
-            if(state) {
-              this.headerImage = url
-              await this.updateProfile({...this.user, header: this.headerImage})
-            }else{
-              this.footerImage = url
-              await this.updateProfile({...this.user, footer: this.footerImage})
+            if (state) {
+              this.headerImage = url;
+              await this.updateProfile({
+                ...this.user,
+                header: this.headerImage,
+              });
+            } else {
+              this.footerImage = url;
+              await this.updateProfile({
+                ...this.user,
+                footer: this.footerImage,
+              });
             }
-            this.loading = false
+            this.loading = false;
           })
           .catch((error) => {
-            console.log('uploadfiles: ', error)
-            this.loading = false
+            console.log("uploadfiles: ", error);
+            this.loading = false;
           });
       });
     },
@@ -105,17 +154,58 @@ export default {
         text: "",
       };
     },
+    async addRecord() {
+      this.loading = true;
+      const db = this.$firestore;
+      const user = this.user;
+      this.editor
+        .save()
+        .then(async (outputData) => {
+          try {
+            const docRef = await setDoc(doc(db, "templates", user.uid), outputData);
+            console.log("Document written with ID: ", docRef);
+            this.loading = false;
+          } catch (e) {
+            console.error("Error adding document: ", e);
+            this.loading = false;
+          }
+        })
+        .catch((error) => {
+          console.log("addRecordError: ", error);
+          this.loading = false;
+        });
+    },
+    async readDocument() {
+      this.loading = true;
+      const docRef = doc(
+        this.$firestore,
+        "templates",
+        this.user.uid
+      );
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        console.log("Document data:", docSnap.data());
+        this.renderEditor(docSnap.data());
+      } else {
+        // docSnap.data() will be undefined in this case
+        console.log("No such document!");
+        this.renderEditor(this.editorBlocks).then(() => {
+          // save an empty array
+        });
+      }
+    },
   },
 };
 </script>
 <template>
   <v-row no-gutters class="pa-4">
-    <v-col class="mt-4" cols="12">
+    <v-col class="mt-4" md="4">
       <p>Header</p>
-      <div class="d-flex" style="width: 100%;">
-        <div class="__cell_full__ text-center" style="width: 100%;">
+      <div class="d-flex" style="width: 100%">
+        <div class="__cell_full__ text-center" style="width: 100%">
           <v-img
-          :src="headerImage"
+            :src="headerImage"
             :lazy-src="headerImage"
             width="100%"
             height="100px"
@@ -124,8 +214,8 @@ export default {
         </div>
       </div>
       <p>Footer</p>
-      <div class="d-flex" style="width: 100%;">
-        <div class="__cell_full__ text-center" style="width: 100%;">
+      <div class="d-flex" style="width: 100%">
+        <div class="__cell_full__ text-center" style="width: 100%">
           <v-img
             :src="footerImage"
             :lazy-src="footerImage"
@@ -135,7 +225,7 @@ export default {
           />
         </div>
       </div>
-      <div class="header_image mt-5">
+      <v-form ref="form" class="header_image mt-5">
         <v-file-input
           v-model="files"
           clearable
@@ -143,9 +233,24 @@ export default {
           label="File input"
           variant="outlined"
           multiple
+          :rules="[
+            (val) => !!val || 'value is required',
+            (val) => (!!val && val.length === 2) || '2 files required',
+          ]"
         ></v-file-input>
-      </div>
-      <v-btn @click="uploadHeaderFooter" :loading="loading">upload</v-btn>
+      </v-form>
+      <v-btn color="primary" class="text-capitalize" @click="uploadHeaderFooter" :loading="loading">upload</v-btn>
+    </v-col>
+    <v-col class="mt-4 pa-2 bg-grey-lighten-4" md="12">
+      <v-row no-gutters justify="space-between">
+        <p class="text-h5 font-weight-bold">
+        Customise Template
+      </p>
+      <v-btn color="primary" class="text-capitalize" @click="addRecord">
+        save
+      </v-btn>
+      </v-row>
+      <div id="editorjs"></div>
     </v-col>
     <Snackbar
       :snackbar="response.isShow"
@@ -154,7 +259,12 @@ export default {
       @update-bool="updateSnackBar"
     />
     <v-dialog v-model="loading">
-      <v-progress-circular indeterminate :size="66" :width="10" class="mx-auto"></v-progress-circular>
+      <v-progress-circular
+        indeterminate
+        :size="66"
+        :width="10"
+        class="mx-auto"
+      ></v-progress-circular>
     </v-dialog>
   </v-row>
 </template>
