@@ -85,6 +85,7 @@ export default {
     footerImage: "link",
     isShowActions: false,
     isEdit: false,
+    query: ''
   }),
   mounted() {
     const auth = getAuth();
@@ -105,6 +106,8 @@ export default {
     if (this.$route.query) {
       console.log("this.$route.query: ", window.location.search);
       this.readData(this.url + window.location.search);
+      this.query = this.$route.query
+      this.isEdit = this.query.collection?true:false
     }
     this.editor = new EditorJS({
       /**
@@ -123,11 +126,14 @@ export default {
     });
     console.log(this.editor);
     setTimeout(() => {
-      this.readDocument();
+      this.readDocument(this.query.collection?'archives':'records');
       this.loading = false;
     }, 10000);
   },
   methods: {
+    openNewPath(path) {
+      window.open(path, '_blank')
+    },
     async getCurrentUser(uid) {
       this.loading = true;
       const docRef = doc(this.$firestore, "users", uid);
@@ -180,11 +186,11 @@ export default {
         text: "",
       };
     },
-    async readDocument() {
+    async readDocument(collection = 'records') {
       this.loading = true;
       const docRef = doc(
         this.$firestore,
-        "records",
+        collection,
         this.$route.query.StudyInstanceUID
       );
       const docSnap = await getDoc(docRef);
@@ -291,6 +297,9 @@ export default {
           try {
             const edjsParser = edjHTML()
             const study = edjsParser.parse(outputData)
+            study.splice(0, 0, `<img src="${this.headerImage}" width="100%"/>`)
+            study.push(`<img src="${this.footerImage}" width="100%" />`)
+            console.log('study: ', study)
             const res = await fetch(this.pdfLink + '/' + this.$route.query.StudyInstanceUID, {
               method: 'POST',
               headers: {
@@ -307,14 +316,29 @@ export default {
             // console.log('url: ', html)
             // window.open(this.pdfLink)
             this.loading = false;
+            this.response = {
+              color: 'bg-green',
+              text: 'pdf link was generated successfully',
+              isShow:  true
+            }
           } catch (e) {
             console.error("Error adding document: ", e);
             this.loading = false;
+            this.response = {
+              color: 'bg-red',
+              text: 'document not saved. Try again',
+              isShow:  true
+            }
           }
         })
         .catch((error) => {
           console.log("addRecordError: ", error);
           this.loading = false;
+          this.response = {
+              color: 'bg-red',
+              text: 'Failed to get document. Try again',
+              isShow:  true
+            }
         });
     }
   },
@@ -324,7 +348,10 @@ export default {
   <v-row no-gutters class="bg-grey-lighten-4">
     <v-col md="10" xl="8" class="pa-2 mx-auto bg-white">
       <div>
-        <v-row no-gutters justify="end">
+        <v-row no-gutters justify="space-between">
+          <v-btn class="my-3 text-capitalize" color="primary" variant="flat" @click="openNewPath(`http://localhost:4000/bucket/pdf/${query.StudyInstanceUID}`)">
+                View Pdf
+              </v-btn>
           <v-menu v-if="isShowActions">
             <template v-slot:activator="{ props }">
               <v-btn class="my-3 text-capitalize" color="primary" variant="flat" v-bind="props">
@@ -335,14 +362,14 @@ export default {
               <v-list-item v-if="!isEdit" @click="addRecord(true)">
                 <v-list-item-title>Edit Report</v-list-item-title>
               </v-list-item>
-              <v-list-item v-if="isEdit" @click="addRecord(false)">
+              <v-list-item v-if="isEdit && !query.collection" @click="addRecord(false)">
                 <v-list-item-title>Save Report</v-list-item-title>
               </v-list-item>
-              <v-list-item @click="generateUrl">
-                <v-list-item-title>Get PDF</v-list-item-title>
+              <v-list-item v-if="!query.collection" @click="generateUrl">
+                <v-list-item-title>Generate PDF</v-list-item-title>
               </v-list-item>
               <v-list-item v-if="isEdit" @click="addArchive">
-                <v-list-item-title>Archive Report</v-list-item-title>
+                <v-list-item-title>Save Archive</v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
@@ -380,7 +407,7 @@ export default {
       :text="response.text"
       @update-bool="updateSnackBar"
     />
-    <v-dialog v-model="loading">
+    <v-dialog v-model="loading" persistent>
       <v-progress-circular
         indeterminate
         :size="66"

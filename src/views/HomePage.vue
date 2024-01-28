@@ -113,7 +113,7 @@ export default {
     },
     openNewPath(value) {
       const path = "?StudyInstanceUID=" + value;
-      this.$router.push("/report" + path);
+      this.$router.push("http://localhost:8080/bluelight/html/start.html" + path);
     },
     checkForNameIn(data) {
       return useChecker(data);
@@ -332,20 +332,18 @@ export default {
                   <v-menu activator="parent">
                     <v-list>
                       <v-list-item
-                        @click="fetchSeries(checkForNameIn(data['0020000D']))"
+                        @click="openNewPath(checkForNameIn(data['0020000D']))"
                       >
-                        <v-list-item-title> View </v-list-item-title>
+                        <v-list-item-title> View Study </v-list-item-title>
                       </v-list-item>
                       <v-list-item
                         v-for="(item, index) in actions"
                         :key="index"
                         @click="
-                          openNewPath(
-                            checkForNameIn(data['0020000D'])
-                          )
+                          $router.push(`/report?StudyInstanceUID=${checkForNameIn(data['0020000D'])}`)
                         "
                       >
-                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                        <v-list-item-title>Open Report</v-list-item-title>
                       </v-list-item>
                       <v-list-item
                         @click="

@@ -56,7 +56,7 @@ export default {
                 {{ archive.user.name }}
             </td>
             <td>
-                <v-btn color="primary" variant="plain" class="text-capitalize" @click="$router.push(`/report?StudyInstanceUID=${archive.uid}`)">
+                <v-btn color="primary" variant="plain" class="text-capitalize" @click="$router.push(`/report?StudyInstanceUID=${archive.uid}&collection=true`)">
                     Edit
                 </v-btn>
             </td>
