@@ -2,10 +2,13 @@
 import { collection, query, where, getDocs } from "firebase/firestore";
 export default {
     data: () => ({
-        archives: []
+        archives: [],
+        loading: false
     }),
   async mounted() {
-    this.getData();
+    this.loading = true
+    await this.getData();
+    this.loading = false
   },
   methods: {
     async getData() {
@@ -17,7 +20,6 @@ export default {
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((doc) => {
         // doc.data() is never undefined for query doc snapshots
-        console.log(doc.id, " => ", doc.data());
         this.archives.push({...doc.data(), uid: doc.id})
       });
     },
@@ -64,5 +66,13 @@ export default {
         </tbody>
       </template>
     </v-table>
+    <v-dialog v-model="loading">
+      <v-progress-circular
+        indeterminate
+        :size="66"
+        :width="10"
+        class="mx-auto"
+      ></v-progress-circular>
+    </v-dialog>
   </div>
 </template>

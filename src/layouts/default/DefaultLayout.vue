@@ -11,8 +11,5 @@
   import DefaultView from './ViewLayout.vue'
 export default {
   components: {DefaultBar, DefaultView},
-  beforeRouteEnter (app) {
-    console.log('app.config.globalProperties.$mainUser', app)
-  }
 }
 </script>

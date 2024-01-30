@@ -9,16 +9,15 @@ export function createNewUser (db, email, password) {
         const user = userCredential.user;
         // ...
         try {
-          const docRef = await setDoc(
+          await setDoc(
             doc(db, "users", user.uid),
             {
               username: 'trevis',
               name: 'Trevis Wamuthenya'
             }
           );
-          console.log("Document written with ID: ", docRef);
         } catch (e) {
-          console.error("Error adding document: ", e);
+          //
         }
         return user
       })

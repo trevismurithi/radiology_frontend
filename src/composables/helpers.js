@@ -133,7 +133,7 @@ async function createImageIdsAndCacheMetaData({
           );
         });
       } catch (error) {
-        console.log(error);
+        //
       }
     }
   }

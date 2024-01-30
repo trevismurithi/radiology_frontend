@@ -74,7 +74,6 @@ export default {
       } else {
         // User is signed out
         // ...
-        console.log("auth.currentUser: N/A");
       }
     });
     await this.readData(this.url);
@@ -86,12 +85,10 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Current User data:", docSnap.data());
         this.user = docSnap.data();
         this.store.setUser(this.user);
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such document!");
       }
     },
     orderData(key) {
@@ -159,7 +156,6 @@ export default {
         const data = await res.json();
         this.dataList = data;
       } catch (e) {
-        console.log("errorReadData: ", e);
         this.response.isShow = true;
         this.response.text = "record not found";
         this.response.color = "bg-red";
@@ -184,7 +180,6 @@ export default {
         });
         this.seriesList = await res.json();
         this.seriesDialog = true;
-        console.log("fetchingSeries: ", this.seriesList);
       } catch (e) {
         //
       }

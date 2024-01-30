@@ -64,7 +64,6 @@ export default {
       } else {
         // User is signed out
         // ...
-        console.log("auth.currentUser: N/A");
       }
     });
     setTimeout(() => {
@@ -82,7 +81,6 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Current User data:", docSnap.data());
         this.user = docSnap.data();
         this.user = { ...this.user, uid };
         if (this.user.header) {
@@ -94,7 +92,6 @@ export default {
         this.store.setUser(this.user);
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such document!");
       }
     },
     async uploadHeaderFooter() {
@@ -107,11 +104,10 @@ export default {
     },
     async updateProfile(user) {
       try {
-        const docRef = await setDoc(
+        await setDoc(
           doc(this.$firestore, "users", this.user.uid),
           user
         );
-        console.log("Document written with ID: ", docRef);
       } catch (e) {
         console.error("Error adding document: ", e);
       }
@@ -121,11 +117,9 @@ export default {
       const storageRef = ref(storage, name);
 
       // 'file' comes from the Blob or File API
-      uploadBytes(storageRef, this.files[index]).then((snapshot) => {
-        console.log("Uploaded a blob or file!", snapshot);
+      uploadBytes(storageRef, this.files[index]).then(() => {
         getDownloadURL(ref(storage, name))
           .then(async (url) => {
-            console.log("Uploaded a blob or file!", url);
             if (state) {
               this.headerImage = url;
               await this.updateProfile({
@@ -141,8 +135,7 @@ export default {
             }
             this.loading = false;
           })
-          .catch((error) => {
-            console.log("uploadfiles: ", error);
+          .catch(() => {
             this.loading = false;
           });
       });
@@ -162,16 +155,13 @@ export default {
         .save()
         .then(async (outputData) => {
           try {
-            const docRef = await setDoc(doc(db, "templates", user.uid), outputData);
-            console.log("Document written with ID: ", docRef);
+            await setDoc(doc(db, "templates", user.uid), outputData);
             this.loading = false;
           } catch (e) {
-            console.error("Error adding document: ", e);
             this.loading = false;
           }
         })
-        .catch((error) => {
-          console.log("addRecordError: ", error);
+        .catch(() => {
           this.loading = false;
         });
     },
@@ -185,11 +175,9 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Document data:", docSnap.data());
         this.renderEditor(docSnap.data());
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such document!");
         this.renderEditor(this.editorBlocks).then(() => {
           // save an empty array
         });

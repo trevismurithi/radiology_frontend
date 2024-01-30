@@ -109,7 +109,6 @@ export default {
         // rootUrl: "http://127.0.0.1:4200/api/dicom/wado?requestType=WADO",
         wadoRsRoot: "http://127.0.0.1:4200/dicom-web",
       });
-      // console.log("imageIds----: ", this.imageIds);
       // Final code
       const content = document.getElementById("content");
       const element = document.createElement("div");
@@ -159,7 +158,7 @@ export default {
 
       this.ctToolGroup.addViewport(viewportId, renderingEngineId);
     } catch (error) {
-      console.log("error: ", error);
+      //
     }
   },
   methods: {
@@ -167,10 +166,8 @@ export default {
       try {
         const res = await fetch(url.replace("wadors:", ""));
         const data = await res.blob();
-        // console.log(data, "-", URL.createObjectURL(data));
         return URL.createObjectURL(data);
       } catch (error) {
-        console.log("blob fetch error: ", error);
         return "https://cdn2.iconfinder.com/data/icons/prohibited-forbidden-signs/100/Prohibited-01-512.png";
       }
     },

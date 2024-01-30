@@ -28,7 +28,6 @@ onAuthStateChanged(auth, (user) => {
     } else {
       // User is signed out
       // ...
-      console.log('auth.currentUser: N/A')
     }
     
 

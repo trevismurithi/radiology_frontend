@@ -56,13 +56,11 @@
           try {
             this.loading = true
             const res = await signIn(this.email,this.password)
-            console.log('res: ', res)
             if(res.uid) {
               this.$router.push({name: 'Home'})
             }
           } catch (error) {
             //
-            console.log('error', error)
           }
           this.loading = false
         }

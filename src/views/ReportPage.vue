@@ -99,12 +99,9 @@ export default {
       } else {
         // User is signed out
         // ...
-        console.log("auth.currentUser: N/A");
       }
     });
-    console.log("this.$firestore: ", this.$firestore);
     if (this.$route.query) {
-      console.log("this.$route.query: ", window.location.search);
       this.readData(this.url + window.location.search);
       this.query = this.$route.query
       this.isEdit = this.query.collection?true:false
@@ -124,7 +121,6 @@ export default {
         list: List,
       },
     });
-    console.log(this.editor);
     setTimeout(() => {
       this.readDocument(this.query.collection?'archives':'records');
       this.loading = false;
@@ -141,7 +137,6 @@ export default {
 
       if (docSnap.exists()) {
         this.user = { ...docSnap.data(), uid: docSnap.id };
-        console.log("Current User data:", this.user);
         this.store.setUser(this.user);
         if (this.user.header) {
           this.headerImage = this.user.header;
@@ -151,7 +146,7 @@ export default {
         }
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such document!");
+        // no such document
       }
     },
     renderEditor(data) {
@@ -170,7 +165,6 @@ export default {
         this.fullNames = useChecker(data[0]["00100010"]);
         this.number = useChecker(data[0]["00100020"]);
       } catch (e) {
-        console.log("errorReadData: ", e);
         this.response.isShow = true;
         this.response.text = "record not found";
         this.response.color = "bg-red";
@@ -196,7 +190,6 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Document data:", docSnap.data());
         this.renderEditor(docSnap.data().data);
         this.referring = docSnap.data().user.name;
         if (this.$mainUser.uid === docSnap.data().user.uid){
@@ -206,7 +199,6 @@ export default {
         }
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such document!");
         this.isShowActions = true
         const template = await this.readTemplate()
         this.renderEditor(template?template:{})
@@ -225,11 +217,9 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        console.log("Document data:", docSnap.data());
         return docSnap.data()
       } else {
         // docSnap.data() will be undefined in this case
-        console.log("No such Template!");
         return null
       }
     },
@@ -242,7 +232,7 @@ export default {
         .save()
         .then(async (outputData) => {
           try {
-            const docRef = await setDoc(doc(db, "records", studyID), {
+            await setDoc(doc(db, "records", studyID), {
               pending,
               data: outputData,
               user,
@@ -252,16 +242,28 @@ export default {
             }else {
               this.isEdit = false
             }
-            console.log("Document written with ID: ", docRef);
             this.loading = false;
+            this.response = {
+              color: 'bg-green',
+              text: 'Successful',
+              isShow:  true
+            }
           } catch (e) {
-            console.error("Error adding document: ", e);
             this.loading = false;
+            this.response = {
+              color: 'bg-red',
+              text: 'Error adding document',
+              isShow:  true
+            }
           }
         })
-        .catch((error) => {
-          console.log("addRecordError: ", error);
+        .catch(() => {
           this.loading = false;
+          this.response = {
+              color: 'bg-red',
+              text: 'Adding Document failed',
+              isShow:  true
+            }
         });
     },
     async addArchive() {
@@ -273,20 +275,32 @@ export default {
         .save()
         .then(async (outputData) => {
           try {
-            const docRef = await setDoc(doc(db, "archives", studyID), {
+            await setDoc(doc(db, "archives", studyID), {
               data: outputData,
               user,
             });
-            console.log("Document written with ID: ", docRef);
             this.loading = false;
+            this.response = {
+              color: 'bg-green',
+              text: 'Saved report to archive',
+              isShow:  true
+            }
           } catch (e) {
-            console.error("Error adding document: ", e);
             this.loading = false;
+            this.response = {
+              color: 'bg-red',
+              text: 'Failed to Save to archive',
+              isShow:  true
+            }
           }
         })
         .catch((error) => {
-          console.log("addRecordError: ", error);
           this.loading = false;
+          this.response = {
+              color: 'bg-red',
+              text: 'report failed to save' + error.message,
+              isShow:  true
+            }
         });
     },
     async generateUrl () {
@@ -299,8 +313,7 @@ export default {
             const study = edjsParser.parse(outputData)
             study.splice(0, 0, `<img src="${this.headerImage}" width="100%"/>`)
             study.push(`<img src="${this.footerImage}" width="100%" />`)
-            console.log('study: ', study)
-            const res = await fetch(this.pdfLink + '/' + this.$route.query.StudyInstanceUID, {
+            await fetch(this.pdfLink + '/' + this.$route.query.StudyInstanceUID, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -309,11 +322,6 @@ export default {
                 study
               })
             })
-            // const data = await res.text()
-            const json = await res.json()
-            // console.log('data: ', data)
-            console.log('json: ', json)
-            // console.log('url: ', html)
             // window.open(this.pdfLink)
             this.loading = false;
             this.response = {
@@ -322,7 +330,6 @@ export default {
               isShow:  true
             }
           } catch (e) {
-            console.error("Error adding document: ", e);
             this.loading = false;
             this.response = {
               color: 'bg-red',
@@ -332,11 +339,10 @@ export default {
           }
         })
         .catch((error) => {
-          console.log("addRecordError: ", error);
           this.loading = false;
           this.response = {
               color: 'bg-red',
-              text: 'Failed to get document. Try again',
+              text: 'Failed to get document. Try again' + error.message,
               isShow:  true
             }
         });

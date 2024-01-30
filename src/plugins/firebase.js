@@ -21,7 +21,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const storage = getStorage(app);
-console.log('app firebase: ', app)
 const db = getFirestore(app);
 export default {
   install: (app) => {
