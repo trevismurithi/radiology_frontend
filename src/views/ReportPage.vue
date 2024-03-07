@@ -124,7 +124,7 @@ export default {
     setTimeout(() => {
       this.readDocument(this.query.collection?'archives':'records');
       this.loading = false;
-    }, 10000);
+    }, 3000);
   },
   methods: {
     openNewPath(path) {

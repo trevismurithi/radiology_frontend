@@ -21,8 +21,8 @@ export default {
         text: "",
       },
       loading: false,
-      url: "http://127.0.0.1:4200/dicom-web/studies",
-      series: "http://127.0.0.1:4200/dicom-web/studies/",
+      url: `${process.env.VITE_ORTHANC_URL}dicom-web/studies`,
+      series: `${process.env.VITE_ORTHANC_URL}dicom-web/studies/`,
       page: 1,
       headers: [
         {
@@ -62,6 +62,7 @@ export default {
     },
   },
   async mounted() {
+    console.log('process.env: ', process)
     // read user
     const auth = getAuth();
     onAuthStateChanged(auth, (user) => {
@@ -109,8 +110,7 @@ export default {
       this.response.text = "copied";
     },
     openNewPath(value) {
-      const path = "?StudyInstanceUID=" + value;
-      this.$router.push("http://localhost:8080/bluelight/html/start.html" + path);
+      window.open(`${process.env.VITE_OHIF_URL}${value}/ohif-dicom-json`, '_blank');
     },
     checkForNameIn(data) {
       return useChecker(data);
@@ -145,22 +145,37 @@ export default {
     },
     async readData(url = this.url) {
       this.loading = true;
-      try {
-        const res = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        });
-        const data = await res.json();
-        this.dataList = data;
-      } catch (e) {
-        this.response.isShow = true;
-        this.response.text = "record not found";
+        Promise.allSettled([
+          fetch(`${process.env.VITE_ORTHANC_URL}studies`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          }),
+          fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          })
+        ]).then(async(results) => {
+          console.log('results: ', results)
+          if (results[0].status === "fulfilled" && results[1].status === "fulfilled") {
+            const studies = await results[0].value.json()
+            const dcom = await results[1].value.json()
+            this.dataList = dcom.map((com, index) => ({...com, study: studies[index]}));
+            // console.log('studies+dcom: ', this.dataList)
+          }
+          this.loading = false;
+          
+        }).catch((err) => {
+          this.response.isShow = true;
+        this.response.text = err.message;
         this.response.color = "bg-red";
-      }
-      this.loading = false;
+        this.loading = false;
+        })
     },
     updateSnackBar(e) {
       this.response = {
@@ -187,30 +202,19 @@ export default {
   },
 };
 </script>
+
 <template>
   <v-row no-gutters class="bg-grey-lighten-4">
     <v-col cols="12">
       <v-row v-if="false" no-gutters class="my-2" justify="end">
         <div class="d-flex">
           <div style="width: 200px">
-            <v-text-field
-              v-model="StudyDateFrom"
-              type="date"
-              density="compact"
-              hide-details
-              variant="plain"
-              label="From Date"
-            />
+            <v-text-field v-model="StudyDateFrom" type="date" density="compact" hide-details variant="plain"
+              label="From Date" />
           </div>
           <div class="ml-5" style="width: 200px">
-            <v-text-field
-              v-model="StudyDateTo"
-              type="date"
-              density="compact"
-              hide-details
-              variant="plain"
-              label="To Date"
-            />
+            <v-text-field v-model="StudyDateTo" type="date" density="compact" hide-details variant="plain"
+              label="To Date" />
           </div>
         </div>
       </v-row>
@@ -220,46 +224,36 @@ export default {
             <tr>
               <th class="text-left">
                 Patient ID
-                <v-icon
-                  :color="orderSelected === '00100020' ? 'primary' : 'black'"
-                  @click="orderData('00100020', (reverse = !reverse))"
-                >
+                <v-icon :color="orderSelected === '00100020' ? 'primary' : 'black'"
+                  @click="orderData('00100020', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
               <th class="text-left">
                 Patient Name
-                <v-icon
-                  :color="orderSelected === '00100010' ? 'primary' : 'black'"
-                  @click="orderData('00100010', (reverse = !reverse))"
-                >
+                <v-icon :color="orderSelected === '00100010' ? 'primary' : 'black'"
+                  @click="orderData('00100010', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
               <th class="text-left">
                 Study Date
-                <v-icon
-                  :color="orderSelected === '00080020' ? 'primary' : 'black'"
-                  @click="orderData('00080020', (reverse = !reverse))"
-                >
+                <v-icon :color="orderSelected === '00080020' ? 'primary' : 'black'"
+                  @click="orderData('00080020', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
               <th class="text-left">
                 Identifier
-                <v-icon
-                  :color="orderSelected === '00080050' ? 'primary' : 'black'"
-                  @click="orderData('00080050', (reverse = !reverse))"
-                >
+                <v-icon :color="orderSelected === '00080050' ? 'primary' : 'black'"
+                  @click="orderData('00080050', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
               <th class="text-left">
                 Modality
-                <v-icon
-                  :color="orderSelected === '00080061' ? 'primary' : 'black'"
-                  @click="orderData('00080061', (reverse = !reverse))"
-                >
+                <v-icon :color="orderSelected === '00080061' ? 'primary' : 'black'"
+                  @click="orderData('00080061', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
@@ -269,50 +263,23 @@ export default {
           <tbody>
             <tr>
               <td>
-                <v-text-field
-                  v-model="patientID"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="search id"
-                />
+                <v-text-field v-model="patientID" density="compact" hide-details variant="plain" label="search id" />
               </td>
               <td>
-                <v-text-field
-                  v-model="patientName"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="search name"
-                />
+                <v-text-field v-model="patientName" density="compact" hide-details variant="plain"
+                  label="search name" />
               </td>
               <td>N/A</td>
               <td>
-                <v-text-field
-                  v-model="identifier"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="search identifier"
-                />
+                <v-text-field v-model="identifier" density="compact" hide-details variant="plain"
+                  label="search identifier" />
               </td>
               <td>
-                <v-text-field
-                  v-model="modality"
-                  density="compact"
-                  hide-details
-                  variant="plain"
-                  label="search modality"
-                />
+                <v-text-field v-model="modality" density="compact" hide-details variant="plain"
+                  label="search modality" />
               </td>
               <td>
-                <v-btn
-                  color="blue-darken-2"
-                  variant="flat"
-                  class="text-capitalize"
-                  @click="filterData"
-                  >search</v-btn
-                >
+                <v-btn color="blue-darken-2" variant="flat" class="text-capitalize" @click="filterData">search</v-btn>
               </td>
             </tr>
             <tr v-for="(data, i) in dataList" :key="i">
@@ -326,25 +293,17 @@ export default {
                   More
                   <v-menu activator="parent">
                     <v-list>
-                      <v-list-item
-                        @click="openNewPath(checkForNameIn(data['0020000D']))"
-                      >
+                      <v-list-item @click="openNewPath(data['study'])">
                         <v-list-item-title> View Study </v-list-item-title>
                       </v-list-item>
-                      <v-list-item
-                        v-for="(item, index) in actions"
-                        :key="index"
-                        @click="
-                          $router.push(`/report?StudyInstanceUID=${checkForNameIn(data['0020000D'])}`)
-                        "
-                      >
+                      <v-list-item v-for="(item, index) in actions" :key="index" @click="
+        $router.push(`/report?StudyInstanceUID=${checkForNameIn(data['0020000D'])}`)
+        ">
                         <v-list-item-title>Open Report</v-list-item-title>
                       </v-list-item>
-                      <v-list-item
-                        @click="
-                          copyText(i + 1, checkForNameIn(data['0020000D']))
-                        "
-                      >
+                      <v-list-item @click="
+        copyText(i + 1, checkForNameIn(data['0020000D']))
+        ">
                         <v-list-item-title>Copy Link</v-list-item-title>
                       </v-list-item>
                     </v-list>
@@ -357,19 +316,9 @@ export default {
       </v-table>
       <!-- <v-pagination v-model="page" :length="6" /> -->
     </v-col>
-    <Snackbar
-      :snackbar="response.isShow"
-      :color="response.color"
-      :text="response.text"
-      @update-bool="updateSnackBar"
-    />
+    <Snackbar :snackbar="response.isShow" :color="response.color" :text="response.text" @update-bool="updateSnackBar" />
     <v-dialog v-model="loading">
-      <v-progress-circular
-        indeterminate
-        :size="66"
-        :width="10"
-        class="mx-auto"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate :size="66" :width="10" class="mx-auto"></v-progress-circular>
     </v-dialog>
     <v-dialog v-model="seriesDialog" width="80%" persistent>
       <v-card class="pa-4">
@@ -377,6 +326,7 @@ export default {
           <v-icon @click="seriesDialog = false"> mdi-close </v-icon>
         </v-row>
         <v-table>
+
           <template #default>
             <thead>
               <tr>
@@ -394,18 +344,13 @@ export default {
                 <td>{{ checkForNameIn(data["00080020"]) }}</td>
                 <td>{{ checkForNameIn(data["00080050"]) }}</td>
                 <td>
-                  <v-btn
-                    variant="flat"
-                    class="text-capitalize text-blue"
-                    append-icon="mdi-arrow-right"
-                    @click="
-                      $router.push(
-                        `/dicomweb?studyUID=${checkForNameIn(
-                          data['0020000D']
-                        )}&seriesUID=${checkForNameIn(data['0020000E'])}`
-                      )
-                    "
-                  >
+                  <v-btn variant="flat" class="text-capitalize text-blue" append-icon="mdi-arrow-right" @click="
+        $router.push(
+          `/dicomweb?studyUID=${checkForNameIn(
+            data['0020000D']
+          )}&seriesUID=${checkForNameIn(data['0020000E'])}`
+        )
+        ">
                     open
                   </v-btn>
                 </td>

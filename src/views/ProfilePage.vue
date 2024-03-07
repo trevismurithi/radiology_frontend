@@ -69,7 +69,7 @@ export default {
     setTimeout(() => {
       this.readDocument();
       this.loading = false;
-    }, 10000);
+    }, 3000);
   },
   methods: {
     renderEditor(data) {
