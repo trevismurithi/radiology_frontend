@@ -77,7 +77,6 @@ export default {
   },
   methods: {
     renderEditor(data) {
-      console.log(data)
       return this.editor.render(data);
     },
     async getCurrentUser(uid) {

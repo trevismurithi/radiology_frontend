@@ -62,7 +62,6 @@ export default {
     },
   },
   async mounted() {
-    console.log('process.env: ', process)
     // read user
     const auth = getAuth();
     onAuthStateChanged(auth, (user) => {
@@ -163,7 +162,6 @@ export default {
             },
           })
         ]).then(async(results) => {
-          console.log('results: ', results)
           if (results[0].status === "fulfilled" && results[1].status === "fulfilled") {
             const studies = await results[0].value.json()
             const dcom = await results[1].value.json()
