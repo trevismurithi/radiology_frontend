@@ -8,7 +8,48 @@ const days = [
   'Thursday', 'Friday', 'Saturday',
   'Sunday'
 ]
-
+export const tableBlock = (name, number='', radiologist='', refer='', age='', gender='') => ({
+  "blocks": [
+      {
+          "id": "dR_C0kYEVg",
+          "type": "table",
+          "data": {
+              "content": [
+                  [
+                      `\n\t\t\t\tName: ${name} \n\t\t\t\t\n\t\t\t\t\n\t\t\t`,
+                      "",
+                      `Number: ${number}`
+                  ],
+                  [
+                      `\n\t\t\t\tAge:\n\t\t\t\ ${age} \n\t\t\t`,
+                      `\n\t\t\t\t          Gender:\n\t\t\t\t ${gender} \n\t\t\t\t\n\t\t\t`,
+                      `Referred By: ${refer}`
+                  ]
+              ]
+          }
+      },
+      {
+        "id": "qUZRjXFkUv",
+        "type": "table",
+        "data": {
+            "content": [
+                [
+                    "\n\t\t\tRadiologist\n\t\t"
+                ],
+                [
+                    `\n\t\t\tName:\t\t\t${radiologist}\n\t\t\tSign…………………………\n\t\t`
+                ],
+                [
+                    "\n\t\t\tDate:\n\t\t"
+                ],
+                [
+                    "\n\t\t\tCell phone:\n\t\t"
+                ]
+            ]
+        }
+    }
+  ],
+})
 function useDateFormat (date) {
   const formatDate = new Date(date)
   return formatDate.getDate() + '/' + (formatDate.getMonth() + 1) + '/' + formatDate.getFullYear()

@@ -1,45 +1,32 @@
 {
   "name": "radiology_frontend",
-  "version": "0.0.0",
   "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --fix --ignore-path .gitignore"
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@cornerstonejs/calculate-suv": "^1.1.0",
-    "@cornerstonejs/core": "^1.42.0",
-    "@cornerstonejs/dicom-image-loader": "^1.42.0",
-    "@cornerstonejs/streaming-image-volume-loader": "^1.42.0",
-    "@cornerstonejs/tools": "^1.42.0",
-    "@editorjs/editorjs": "^2.28.2",
+    "@editorjs/editorjs": "^2.29.0",
     "@editorjs/header": "^2.8.1",
     "@editorjs/list": "^1.9.0",
-    "@mdi/font": "7.0.96",
-    "@vueuse/core": "^10.7.1",
-    "core-js": "^3.29.0",
-    "dcmjs": "^0.30.0",
-    "dicom-microscopy-viewer": "^0.45.1",
-    "dicom-parser": "^1.8.21",
-    "dicomweb-client": "^0.10.3",
+    "@mdi/font": "^7.4.47",
     "editorjs-html": "^3.4.3",
-    "firebase": "^10.7.1",
-    "http-server": "^14.1.1",
-    "pinia": "^2.0.0",
-    "roboto-fontface": "*",
-    "vue": "^3.2.0",
-    "vue-router": "^4.0.0",
-    "vuetify": "^3.0.0"
+    "firebase": "^10.9.0",
+    "pinia": "^2.1.7",
+    "roboto-fontface": "^0.10.0",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0",
+    "vuetify": "^3.5.9"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.0.0",
-    "eslint": "^8.37.0",
-    "eslint-plugin-vue": "^9.3.0",
-    "sass": "^1.60.0",
-    "unplugin-fonts": "^1.0.3",
-    "vite": "^4.2.0",
-    "vite-plugin-vuetify": "^1.0.0"
+    "@vitejs/plugin-vue": "^5.0.4",
+    "editorjs-table": "^1.4.10",
+    "sass": "^1.72.0",
+    "unplugin-fonts": "^1.1.1",
+    "vite": "^5.1.6",
+    "vite-plugin-vuetify": "^2.0.3"
   }
 }

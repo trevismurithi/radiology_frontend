@@ -8,6 +8,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Snackbar from "@/components/SnackbarComponent.vue";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRequired } from "@/composables/rules";
+import Table from 'editorjs-table'
 export default {
   components: { Snackbar },
   data: () => ({
@@ -49,6 +50,9 @@ export default {
       tools: {
         header: Header,
         list: List,
+        table: {
+          class: Table
+        }
       },
     });
     // read user
@@ -73,6 +77,7 @@ export default {
   },
   methods: {
     renderEditor(data) {
+      console.log(data)
       return this.editor.render(data);
     },
     async getCurrentUser(uid) {
@@ -155,13 +160,15 @@ export default {
         .save()
         .then(async (outputData) => {
           try {
-            await setDoc(doc(db, "templates", user.uid), outputData);
-            this.loading = false;
+            await setDoc(doc(db, "templates", 'default'), {template: JSON.stringify(outputData)});
+            this.loading = false;0
           } catch (e) {
+            console.log('templates1: ', e)
             this.loading = false;
           }
         })
-        .catch(() => {
+        .catch((e) => {
+          console.log('templates: ', e)
           this.loading = false;
         });
     },
@@ -170,12 +177,12 @@ export default {
       const docRef = doc(
         this.$firestore,
         "templates",
-        this.user.uid
+        'default'
       );
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        this.renderEditor(docSnap.data());
+        this.renderEditor(JSON.parse(docSnap.data().template));
       } else {
         // docSnap.data() will be undefined in this case
         this.renderEditor(this.editorBlocks).then(() => {
@@ -213,7 +220,7 @@ export default {
           />
         </div>
       </div>
-      <v-form ref="form" class="header_image mt-5">
+      <!-- <v-form ref="form" class="header_image mt-5">
         <v-file-input
           v-model="files"
           clearable
@@ -227,16 +234,16 @@ export default {
           ]"
         ></v-file-input>
       </v-form>
-      <v-btn color="primary" class="text-capitalize" @click="uploadHeaderFooter" :loading="loading">upload</v-btn>
+      <v-btn color="primary" class="text-capitalize" @click="uploadHeaderFooter" :loading="loading">upload</v-btn> -->
     </v-col>
     <v-col class="mt-4 pa-2 bg-grey-lighten-4" md="12">
       <v-row no-gutters justify="space-between">
         <p class="text-h5 font-weight-bold">
         Customise Template
       </p>
-      <v-btn color="primary" class="text-capitalize" @click="addRecord">
+      <!-- <v-btn color="primary" class="text-capitalize" @click="addRecord">
         save
-      </v-btn>
+      </v-btn> -->
       </v-row>
       <div id="editorjs"></div>
     </v-col>

@@ -8,71 +8,22 @@ import { useChecker } from "@/composables/utils";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useAppStore } from "@/store/app";
 import edjHTML from 'editorjs-html'
+import Table from 'editorjs-table'
+import { tableBlock } from '@/composables/utils'
 export default {
   components: { Snackbar },
   data: () => ({
-    pdfLink: 'http://localhost:4000/bucket/pdf',
+    pdfLink: `${process.env.VITE_BACKEND_URL}bucket/pdf`,
     store: useAppStore(),
     user: {},
-    url: "http://127.0.0.1:4200/dicom-web/studies",
+    url: `${process.env.VITE_ORTHANC_URL}dicom-web/studies`,
     loading: false,
     response: {
       isShow: false,
       color: "",
       text: "",
     },
-    editorBlocks: {
-      blocks: [
-        {
-          type: "paragraph",
-          data: {
-            text: "Name:      Number:",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "Age:      Gender:    Referring Doctor:",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "MODALITY+STUDY",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "CLINICAL HISTORY",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "COMPARISSON",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "FINDINGS",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "CONCLUSION",
-          },
-        },
-        {
-          type: "paragraph",
-          data: {
-            text: "RADIOLOGIST+DATE+CONTACT",
-          },
-        },
-      ],
-    },
+    docStatus: null,
     fullNames: "",
     number: "",
     age: "",
@@ -119,6 +70,9 @@ export default {
       tools: {
         header: Header,
         list: List,
+        table: {
+          class: Table
+        }
       },
     });
     setTimeout(() => {
@@ -190,7 +144,12 @@ export default {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        this.renderEditor(docSnap.data().data);
+        this.renderEditor(JSON.parse(docSnap.data().data));
+        if (docSnap.data().pending) {
+          this.docStatus = 'Report in Progress'
+        }else {
+          this.docStatus = 'Report Closed'
+        }
         this.referring = docSnap.data().user.name;
         if (this.$mainUser.uid === docSnap.data().user.uid){
           this.isShowActions = true
@@ -200,8 +159,9 @@ export default {
       } else {
         // docSnap.data() will be undefined in this case
         this.isShowActions = true
-        const template = await this.readTemplate()
-        this.renderEditor(template?template:{})
+        // const template = await this.readTemplate()
+        // console.log(JSON.parse(template))
+        this.renderEditor(tableBlock(this.fullNames, this.number, this.user.name))
         // .then(() => {
         //   // save an empty array
         //   this.addRecord(true)
@@ -212,12 +172,12 @@ export default {
       const docRef = doc(
         this.$firestore,
         "templates",
-        this.user.uid
+        "default"
       );
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        return docSnap.data()
+        return docSnap.data().template
       } else {
         // docSnap.data() will be undefined in this case
         return null
@@ -234,7 +194,7 @@ export default {
           try {
             await setDoc(doc(db, "records", studyID), {
               pending,
-              data: outputData,
+              data: JSON.stringify(outputData),
               user,
             });
             if(pending) {
@@ -249,6 +209,7 @@ export default {
               isShow:  true
             }
           } catch (e) {
+            console.log(e)
             this.loading = false;
             this.response = {
               color: 'bg-red',
@@ -354,10 +315,11 @@ export default {
   <v-row no-gutters class="bg-grey-lighten-4">
     <v-col md="10" xl="8" class="pa-2 mx-auto bg-white">
       <div>
-        <v-row no-gutters justify="space-between">
-          <v-btn class="my-3 text-capitalize" color="primary" variant="flat" @click="openNewPath(`http://localhost:4000/bucket/pdf/${query.StudyInstanceUID}`)">
+        <v-row no-gutters justify="space-between" align="center">
+          <v-btn class="my-3 text-capitalize" color="primary" variant="flat" @click="openNewPath(`${process.env.VITE_BACKEND_URL}/bucket/pdf/${query.StudyInstanceUID}`)">
                 View Pdf
-              </v-btn>
+          </v-btn>
+          <p class="mb-0 text-body-2 font-weight-bold">Status: {{ docStatus?docStatus:'Open' }}</p>
           <v-menu v-if="isShowActions">
             <template v-slot:activator="{ props }">
               <v-btn class="my-3 text-capitalize" color="primary" variant="flat" v-bind="props">

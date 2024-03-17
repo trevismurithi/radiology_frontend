@@ -80,6 +80,10 @@ export default {
     await this.readData(this.url);
   },
   methods: {
+    arrangeDate(time) {
+      const date = String(time)
+      return `${date.substring(0,4)}/${date.substring(4,6)}/${date.substring(6,8)}`
+    },
     async getCurrentUser(uid) {
       this.loading = true;
       const docRef = doc(this.$firestore, "users", uid);
@@ -96,21 +100,19 @@ export default {
       this.orderSelected = key;
       orderByField(key, this.dataList, this.reverse);
     },
-    copyText(i, value) {
-      let path = "";
-      if (i === 1) {
-        path = "?StudyInstanceUID=" + value;
-      } else {
-        path = "?StudyInstanceUID=" + value;
-      }
-      const url = "http://localhost:8080/bluelight/html/start.html" + path;
+    copyText(value) {
+      const url = `${process.env.VITE_OHIF_URL}${value}/ohif-dicom-json`;
       navigator.clipboard.writeText(url);
       this.response.isShow = true;
       this.response.color = "bg-grey";
       this.response.text = "copied";
     },
-    openNewPath(value) {
-      window.open(`${process.env.VITE_OHIF_URL}${value}/ohif-dicom-json`, '_blank');
+    openNewPath(value, state=true) {
+      if(state){
+        window.open(`${process.env.VITE_OHIF_URL}${value}/ohif-dicom-json`, '_blank');
+      }else {
+        window.open(`${process.env.VITE_BASE_URL}${value}`, '_blank');
+      }
     },
     checkForNameIn(data) {
       return useChecker(data);
@@ -237,6 +239,13 @@ export default {
                 </v-icon>
               </th>
               <th class="text-left">
+                Study ID
+                <v-icon :color="orderSelected === '00200010' ? 'primary' : 'black'"
+                  @click="orderData('00200010', (reverse = !reverse))">
+                  mdi-arrow-up-down-bold
+                </v-icon>
+              </th>
+              <th class="text-left">
                 Study Date
                 <v-icon :color="orderSelected === '00080020' ? 'primary' : 'black'"
                   @click="orderData('00080020', (reverse = !reverse))">
@@ -244,16 +253,16 @@ export default {
                 </v-icon>
               </th>
               <th class="text-left">
-                Identifier
-                <v-icon :color="orderSelected === '00080050' ? 'primary' : 'black'"
-                  @click="orderData('00080050', (reverse = !reverse))">
+                Modality
+                <v-icon :color="orderSelected === '00080061' ? 'primary' : 'black'"
+                  @click="orderData('00080061', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
               <th class="text-left">
-                Modality
-                <v-icon :color="orderSelected === '00080061' ? 'primary' : 'black'"
-                  @click="orderData('00080061', (reverse = !reverse))">
+                Identifier
+                <v-icon :color="orderSelected === '00080050' ? 'primary' : 'black'"
+                  @click="orderData('00080050', (reverse = !reverse))">
                   mdi-arrow-up-down-bold
                 </v-icon>
               </th>
@@ -270,13 +279,14 @@ export default {
                   label="search name" />
               </td>
               <td>N/A</td>
-              <td>
-                <v-text-field v-model="identifier" density="compact" hide-details variant="plain"
-                  label="search identifier" />
-              </td>
+              <td>N/A</td>
               <td>
                 <v-text-field v-model="modality" density="compact" hide-details variant="plain"
                   label="search modality" />
+              </td>
+              <td>
+                <v-text-field v-model="identifier" density="compact" hide-details variant="plain"
+                  label="search identifier" />
               </td>
               <td>
                 <v-btn color="blue-darken-2" variant="flat" class="text-capitalize" @click="filterData">search</v-btn>
@@ -285,9 +295,10 @@ export default {
             <tr v-for="(data, i) in dataList" :key="i">
               <td>{{ checkForNameIn(data["00100020"]) }}</td>
               <td>{{ checkForNameIn(data["00100010"]) }}</td>
-              <td>{{ checkForNameIn(data["00080020"]) }}</td>
-              <td>{{ checkForNameIn(data["00080050"]) }}</td>
+              <td>{{ checkForNameIn(data["00200010"]) }}</td>
+              <td>{{ arrangeDate(checkForNameIn(data["00080020"])) }}</td>
               <td>{{ checkForNameIn(data["00080061"]) }}</td>
+              <td>{{ checkForNameIn(data["00080050"]) }}</td>
               <td>
                 <v-btn color="primary" variant="plain" class="text-capitalize">
                   More
@@ -297,12 +308,12 @@ export default {
                         <v-list-item-title> View Study </v-list-item-title>
                       </v-list-item>
                       <v-list-item v-for="(item, index) in actions" :key="index" @click="
-        $router.push(`/report?StudyInstanceUID=${checkForNameIn(data['0020000D'])}`)
+        openNewPath('report?StudyInstanceUID='+checkForNameIn(data['0020000D']), false)
         ">
                         <v-list-item-title>Open Report</v-list-item-title>
                       </v-list-item>
                       <v-list-item @click="
-        copyText(i + 1, checkForNameIn(data['0020000D']))
+        copyText(data['study'])
         ">
                         <v-list-item-title>Copy Link</v-list-item-title>
                       </v-list-item>
